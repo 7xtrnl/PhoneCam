@@ -1,0 +1,67 @@
+name: Build PhoneCam IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ios/**'
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Neueste verfügbare Xcode-Version aktivieren
+        run: |
+          ls /Applications | grep Xcode
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)"
+          xcodebuild -version
+
+      - name: XcodeGen installieren
+        run: brew install xcodegen
+
+      - name: Xcode-Projekt generieren
+        working-directory: ios/PhoneCam
+        run: xcodegen generate
+
+      - name: Unsigned Archive bauen
+        working-directory: ios/PhoneCam
+        run: |
+          set -o pipefail
+          xcodebuild -project PhoneCam.xcodeproj \
+            -scheme PhoneCam \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/PhoneCam.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            archive | tee build.log
+          echo "----- Letzte 80 Zeilen bei Fehler relevant -----"
+          tail -n 80 build.log
+
+      - name: Build-Log als Artifact hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ios/PhoneCam/build.log
+          retention-days: 7
+
+      - name: IPA aus Archive packen
+        working-directory: ios/PhoneCam
+        run: |
+          mkdir -p build/Payload
+          cp -R build/PhoneCam.xcarchive/Products/Applications/PhoneCam.app build/Payload/
+          cd build
+          zip -r PhoneCam.ipa Payload
+          cd ..
+
+      - name: IPA als Artifact hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhoneCam-IPA
+          path: ios/PhoneCam/build/PhoneCam.ipa
+          retention-days: 30

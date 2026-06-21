@@ -1,0 +1,77 @@
+<Window x:Class="PhoneCamReceiver.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PhoneCam Receiver" Height="640" Width="900"
+        Background="{StaticResource BackgroundDark}"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="280"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Linke Seite: Vorschau -->
+        <Border Grid.Column="0" Background="Black" CornerRadius="8" Margin="0,0,16,0">
+            <Grid>
+                <Image x:Name="PreviewImage" Stretch="Uniform"/>
+                <TextBlock x:Name="NoSignalText" Text="Kein Bild – verbinde dich mit deinem iPhone"
+                           Foreground="{StaticResource TextSecondary}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="14"/>
+            </Grid>
+        </Border>
+
+        <!-- Rechte Seite: Steuerung -->
+        <StackPanel Grid.Column="1">
+
+            <TextBlock Text="Verbindung" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
+
+            <TextBlock Text="iPhone IP-Adresse" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+            <TextBox x:Name="IpAddressBox" Margin="0,4,0,8" Padding="6" Text="192.168.1."/>
+
+            <TextBlock Text="Port" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+            <TextBox x:Name="PortBox" Margin="0,4,0,12" Padding="6" Text="5050"/>
+
+            <Button x:Name="ConnectButton" Content="Verbinden" Padding="8" Click="ConnectButton_Click"/>
+
+            <TextBlock x:Name="StatusText" Text="Getrennt" Foreground="{StaticResource TextSecondary}"
+                       Margin="0,8,0,16" TextWrapping="Wrap" FontSize="12"/>
+
+            <Separator Margin="0,0,0,16"/>
+
+            <TextBlock Text="Bildeinstellungen" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
+
+            <TextBlock Text="Erwartete Auflösung" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+            <ComboBox x:Name="ResolutionCombo" Margin="0,4,0,12" SelectedIndex="1">
+                <ComboBoxItem Content="640 x 480"/>
+                <ComboBoxItem Content="1280 x 720"/>
+                <ComboBoxItem Content="1920 x 1080"/>
+            </ComboBox>
+
+            <TextBlock Text="Ziel-FPS" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+            <Slider x:Name="FpsSlider" Minimum="5" Maximum="60" Value="30" Margin="0,4,0,4"
+                    TickFrequency="5" IsSnapToTickEnabled="True"/>
+            <TextBlock Text="{Binding ElementName=FpsSlider, Path=Value, StringFormat='{}{0:0} FPS'}"
+                       Foreground="{StaticResource TextSecondary}" FontSize="11" Margin="0,0,0,12"/>
+
+            <Separator Margin="0,0,0,16"/>
+
+            <TextBlock Text="Virtuelle Webcam" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
+
+            <CheckBox x:Name="VirtualCamCheckbox" Content="Als Webcam bereitstellen (OBS Virtual Camera)"
+                      Foreground="{StaticResource TextSecondary}" FontSize="12"
+                      IsChecked="True" Margin="0,0,0,8" Checked="VirtualCamCheckbox_Changed"
+                      Unchecked="VirtualCamCheckbox_Changed"/>
+
+            <TextBlock x:Name="VCamStatusText" Text="Nicht aktiv"
+                       Foreground="{StaticResource TextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+            <TextBlock Text="Voraussetzung: OBS Studio (28+) ist installiert. Einmalig in OBS auf 'Virtuelle Kamera starten' klicken, dann wieder stoppen. Danach muss OBS nicht mehr offen sein."
+                       Foreground="{StaticResource TextSecondary}" FontSize="10" TextWrapping="Wrap" Opacity="0.7"/>
+
+            <Separator Margin="0,16,0,16"/>
+
+            <TextBlock x:Name="BitrateText" Text="0 KB/s" Foreground="{StaticResource TextSecondary}" FontSize="11"/>
+        </StackPanel>
+    </Grid>
+</Window>

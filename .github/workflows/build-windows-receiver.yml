@@ -1,0 +1,66 @@
+name: Build PhoneCam Receiver (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'windows/**'
+
+jobs:
+  build-bridge:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Bridge-Abhängigkeiten installieren
+        working-directory: windows/vcam_bridge
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyvirtualcam numpy pyinstaller
+      - name: vcam_bridge.exe bauen
+        working-directory: windows/vcam_bridge
+        run: pyinstaller --onefile --noconsole --name vcam_bridge vcam_bridge.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vcam_bridge-build
+          path: windows/vcam_bridge/dist/vcam_bridge.exe
+
+  build-receiver:
+    needs: build-bridge
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: .NET einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: PhoneCamReceiver.exe veröffentlichen (self-contained)
+        working-directory: windows/PhoneCamReceiver
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true `
+            -o publish
+
+      - name: vcam_bridge.exe herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          name: vcam_bridge-build
+          path: windows/PhoneCamReceiver/publish
+
+      - name: Gesamtpaket schnüren
+        run: |
+          mkdir PhoneCamReceiver-Paket
+          Copy-Item windows/PhoneCamReceiver/publish/PhoneCamReceiver.exe PhoneCamReceiver-Paket/
+          Copy-Item windows/PhoneCamReceiver/publish/vcam_bridge.exe PhoneCamReceiver-Paket/
+          Copy-Item windows/README-WINDOWS.txt PhoneCamReceiver-Paket/LIES-MICH.txt -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhoneCamReceiver-Windows
+          path: PhoneCamReceiver-Paket/
+          retention-days: 30

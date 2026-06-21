@@ -1,0 +1,12 @@
+<Application x:Class="PhoneCamReceiver.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <SolidColorBrush x:Key="BackgroundDark" Color="#1A1A1E"/>
+        <SolidColorBrush x:Key="PanelDark" Color="#242429"/>
+        <SolidColorBrush x:Key="AccentGreen" Color="#3DDC84"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#F0F0F2"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#9A9AA2"/>
+    </Application.Resources>
+</Application>

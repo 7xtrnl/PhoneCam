@@ -22,7 +22,7 @@ jobs:
           pip install pyvirtualcam numpy pyinstaller
       - name: vcam_bridge.exe bauen
         working-directory: windows/vcam_bridge
-        run: pyinstaller --onefile --noconsole --name vcam_bridge vcam_bridge.py
+        run: pyinstaller --onefile --name vcam_bridge vcam_bridge.py
       - uses: actions/upload-artifact@v4
         with:
           name: vcam_bridge-build

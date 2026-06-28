@@ -7,20 +7,26 @@ struct ContentView: View {
 
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var showSettings = false
+    @State private var isFullScreen = false
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                statusBar
+            if isFullScreen {
+                fullScreenPreview
+            } else {
+                VStack(spacing: 0) {
+                    statusBar
 
-                previewArea
-                    .frame(maxHeight: .infinity)
+                    previewArea
+                        .frame(maxHeight: .infinity)
 
-                controlPanel
+                    controlPanel
+                }
             }
         }
+        .statusBarHidden(isFullScreen)
         .onAppear {
             camera.onJPEGFrame = { [weak server] data in
                 server?.send(jpegData: data)
@@ -35,6 +41,53 @@ struct ContentView: View {
         .sheet(isPresented: $showSettings) {
             SettingsSheet(camera: camera, server: server)
         }
+    }
+
+    // MARK: - Vollbildmodus (randlos, Querformat)
+
+    private var fullScreenPreview: some View {
+        GeometryReader { geo in
+            ZStack {
+                if let image = camera.lastPreviewImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                } else {
+                    Color.black
+                }
+
+                // Unsichtbare Tap-Fläche, um zurück zur normalen Ansicht zu kommen
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            isFullScreen = false
+                        } label: {
+                            Image(systemName: "arrow.down.right.and.arrow.up.left")
+                                .font(.title3)
+                                .foregroundStyle(.white)
+                                .padding(12)
+                                .background(.black.opacity(0.4))
+                                .clipShape(Circle())
+                        }
+                        .padding()
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .rotationEffect(.degrees(90))
+        .frame(
+            width: UIScreen.main.bounds.height,
+            height: UIScreen.main.bounds.width
+        )
+        // Die View wird gedreht und in vertauschten Dimensionen gerahmt,
+        // damit sie auf dem Hochformat-Bildschirm wie ein echtes Querformat
+        // wirkt, ohne dass die System-Orientierung selbst gewechselt werden muss
+        // (vermeidet Re-Layout-Sprünge anderer SwiftUI-Views im Hintergrund).
     }
 
     // MARK: - Status-Leiste
@@ -58,6 +111,13 @@ struct ContentView: View {
                 Text("IP: \(server.localIPAddress) : \(server.port.rawValue)")
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
+            }
+
+            Button {
+                isFullScreen = true
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .foregroundStyle(.white)
             }
 
             Button {

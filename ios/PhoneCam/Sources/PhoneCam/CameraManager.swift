@@ -52,10 +52,12 @@ final class CameraManager: NSObject, ObservableObject {
 
     private let session = AVCaptureSession()
     private let sessionQueue = DispatchQueue(label: "phonecam.session.queue")
+    private let encodingQueue = DispatchQueue(label: "phonecam.encoding.queue", qos: .userInitiated)
     private let videoOutput = AVCaptureVideoDataOutput()
     private var currentDevice: AVCaptureDevice?
-    private let ciContext = CIContext()
+    private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
     private var stillFrameCounter = 0
+    private var isEncoding = false // verhindert Stau, wenn Encoding langsamer ist als die Kamera
 
     override init() {
         super.init()
@@ -235,19 +237,38 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
             return
         }
 
+        // Falls die vorherige Encoding-Runde noch läuft, diesen Frame überspringen,
+        // statt ihn zu stauen. Das ist der Hauptgrund für Ruckler: ohne diese
+        // Drop-Logik stapeln sich Frames, sobald Encoding/Netzwerk kurz hinterherhinkt,
+        // und die App "holt auf", was sich als Stottern zeigt.
+        guard !isEncoding else { return }
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+
+        isEncoding = true
+        // CVPixelBuffer wird hier zusätzlich retained (über CMSampleBuffer-Referenz),
+        // damit er auf der Encoding-Queue noch gültig ist.
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
         let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
 
-        guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else { return }
-        let uiImage = UIImage(cgImage: cgImage)
+        let quality = jpegQuality
+        let frameIndex = stillFrameCounter
+        stillFrameCounter += 1
 
-        if let data = uiImage.jpegData(compressionQuality: jpegQuality) {
-            onJPEGFrame?(data)
-            // Throttle Preview-Updates auf ~10/s, um die Haupt-UI nicht zu fluten
-            if stillFrameCounter % 3 == 0 {
-                DispatchQueue.main.async { self.lastPreviewImage = uiImage }
+        encodingQueue.async { [weak self] in
+            guard let self else { return }
+            defer { self.isEncoding = false }
+
+            guard let cgImage = self.ciContext.createCGImage(ciImage, from: ciImage.extent) else { return }
+            let uiImage = UIImage(cgImage: cgImage)
+
+            if let data = uiImage.jpegData(compressionQuality: quality) {
+                self.onJPEGFrame?(data)
+                // Throttle Preview-Updates auf ~10/s, um die Haupt-UI nicht zu fluten
+                if frameIndex % 3 == 0 {
+                    DispatchQueue.main.async { self.lastPreviewImage = uiImage }
+                }
             }
-            stillFrameCounter += 1
         }
     }
 }
